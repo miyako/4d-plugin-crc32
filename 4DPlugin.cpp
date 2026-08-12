@@ -48,12 +48,25 @@ void CommandDispatcher (PA_long32 pProcNum, sLONG_PTR *pResult, PackagePtr pPara
 
 void CRC32_Get(sLONG_PTR *pResult, PackagePtr pParams)
 {
-	C_BLOB Param1;
 	C_LONGINT returnValue;
 
-	Param1.fromParamAtIndex(pParams, 1);
+	try
+	{
+		C_BLOB Param1;
+		Param1.fromParamAtIndex(pParams, 1);
 
-    returnValue.setIntValue(crc32buf((char *)Param1.getBytesPtr(), Param1.getBytesLength())); 
+		returnValue.setIntValue(crc32buf((char *)Param1.getBytesPtr(), Param1.getBytesLength()));
+	}
+	catch(...)
+	{
+		// Manifest declares this command with a return value (":L").
+		// If anything above throws, still hand back a defined value
+		// (0) instead of relying on PluginMain's outer catch(...),
+		// which would otherwise leave 4D waiting on a return that
+		// never arrives.
+		returnValue.setIntValue(0);
+	}
+
 	returnValue.setReturn(pResult);
 }
 

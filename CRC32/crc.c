@@ -159,13 +159,19 @@ Boolean_T crc32file(char *name, DWORD *crc, long *charcnt)
 DWORD crc32buf(char *buf, size_t len)
 {
     register DWORD oldcrc32;
+    size_t counter = 0;
     
     oldcrc32 = 0xFFFFFFFF;
     
-    for ( ; len; --len, ++buf)
+    for ( ; len; --len, ++buf, ++counter)
     {
         oldcrc32 = UPDC32(*buf, oldcrc32);
-        PA_YieldAbsolute();
+        /* Yield periodically (every ~1MB) instead of every single byte.
+           A per-byte yield call costs orders of magnitude more than the
+           CRC update itself, turning large-blob checksums into a de
+           facto freeze. Yielding every ~1MB keeps the host responsive
+           on very large inputs without dominating runtime. */
+        if ((counter & 0xFFFFF) == 0) PA_YieldAbsolute();
     }
     
     return ~oldcrc32;
