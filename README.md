@@ -2,6 +2,7 @@
 ![platform](https://img.shields.io/static/v1?label=platform&message=mac-intel%20|%20mac-arm%20|%20win-64&color=blue)
 [![license](https://img.shields.io/github/license/miyako/4d-plugin-crc32)](LICENSE)
 ![downloads](https://img.shields.io/github/downloads/miyako/4d-plugin-crc32/total)
+
 # 4d-plugin-crc32
 
 4D implementation of the standard 32-bit CRC (CRC-32/ADCCP, the same polynomial used by PKZIP, gzip, and Ethernet FCS). The plugin exposes a single command that computes the checksum of a `Blob` and returns it as a `Longint`.
