@@ -1,25 +1,20 @@
 # Builds the plugin for Windows (x64) first, then macOS as a universal
 # (arm64 + x86_64) binary, merges both into the single cross-platform
 # .bundle, codesigns + notarizes the mac binary, and publishes a GitHub
-# Release with the zip and dmg attached.
+# Release with the zip and dmg attached. Manual, immutable source-SHA build;
+# tags and releases are created only after every native gate succeeds.
 #
 # NOTE: /test/ path is intentional and static for this project.
-# PORTABILITY: Edit only PRODUCT_NAME below. Everything else derives from it.
+# PRODUCT_NAME derives native packaging paths; source metadata and asset names
+# are validated explicitly by .github/scripts/{source_version,release}.py.
 # Canonical layout enforced:
 #   test/Plugins/<Product>.bundle/Contents/MacOS/<Product>
 #   test/Plugins/<Product>.bundle/Contents/Windows64/<Product>.4DX
 
-name: Build & Release
+name: Build
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
   workflow_dispatch:
-    inputs:
-      tag:
-        description: Existing tag to build (e.g. v2.3.0)
-        required: true
 
 permissions:
   contents: write
@@ -33,7 +28,7 @@ env:
   # ---------------------------------------------
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-publication
   cancel-in-progress: false
 
 jobs:
@@ -44,11 +39,18 @@ jobs:
       tag: ${{ steps.set.outputs.tag }}
       version: ${{ steps.set.outputs.version }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
       - id: set
+        name: validate source and publication availability
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SELECTED_SHA: ${{ github.sha }}
         run: |
-          TAG="${{ inputs.tag || github.ref_name }}"
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          python3 .github/scripts/release.py preflight --sha "$SELECTED_SHA"
 
   build-windows:
     name: Build Windows (x64)
@@ -57,7 +59,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.version.outputs.tag }}
+          ref: ${{ github.sha }}
 
       - name: setup MSBuild
         uses: microsoft/setup-msbuild@v2
@@ -122,7 +124,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.version.outputs.tag }}
+          ref: ${{ github.sha }}
 
       - name: download windows binaries
         uses: actions/download-artifact@v4
@@ -274,10 +276,9 @@ jobs:
           ls -lh "$ZIP_PATH" "$DMG_PATH"
 
       - name: create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.version.outputs.tag }}
-          name: ${{ needs.version.outputs.tag }}
-          files: |
-            ${{ env.ZIP_PATH }}
-            ${{ env.DMG_PATH }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SELECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/release.py publish --sha "$SELECTED_SHA" "$ZIP_PATH" "$DMG_PATH"
