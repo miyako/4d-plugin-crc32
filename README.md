@@ -24,6 +24,74 @@
 
 ---
 
+## Source versions and manual publication
+
+Run **Bump version** manually, selecting the intended branch and `patch`, `minor`,
+or `major`. It checks out the immutable dispatch SHA, validates source metadata,
+and commits only the coordinated source version fields. An executable pre-push
+guard requires exactly one update whose advertised old SHA is the selected SHA
+and whose new SHA is a clean, single-parent direct child. A moved, rewound,
+deleted, or already-updated branch is rejected; dispatch again after inspection.
+The push is non-force and disables followed tags. Bump creates no tag, release,
+or automatic Build.
+
+Run **Build** separately on the intended source commit using the Actions branch
+selector; it has no inputs. Every job checks out `github.sha`. Source metadata,
+not an existing tag, supplies the strict `X.Y.Z` and prospective `vX.Y.Z` tag.
+There is no main/default-branch-only restriction. Publication is serialized
+repository-wide across branches without cancelling a running build.
+
+The version authority is the coordinated promise in the Bump header introduced
+by `00acd54`: marketing and current/build versions advance together. The older
+marketing-first implementation drifted: `61128f3` advanced marketing and the
+source plist to `1.0.5` but left all six current/build settings at `1.0.3`.
+This migration repairs those settings and the source English localized short
+version/info string to the existing `1.0.5`, without a release increment.
+Future bumps reject drift rather than silently repairing it. Xcode references,
+absent plist keys (including `CFBundleVersion`), BOMs, line endings and modes
+are preserved. Prebuilt bundles, 4D project/data files, localization counters,
+manifest/schema resources and dependencies are not version inputs or rewritten.
+
+Build preserves Windows x64 MSBuild (v143/Windows SDK 10.0), macOS universal
+arm64/x86_64 Xcode `Default`, bundled 4D Plugin API/CRC sources, framework and
+resource copy phases, the intentional `test/Plugins` packaging layout, Windows
+artifact transfer, universal checks, Developer ID signing/verification,
+ZIP/DMG notarization and DMG stapling. The existing macOS deployment override
+is 11.0, while source project settings are 11.5; this migration changes neither.
+The legacy Windows project produces under `CRC32.4dbase/plugins` and the
+existing workflow normalizes the discovered binary into `test/Plugins`.
+These native toolchain/layout caveats are not bypassed by lifecycle tests.
+Native builds and the existing 4D test method require their respective hosts.
+Signing still requires `APPLE_DEVELOPER_ID_CERTIFICATE`,
+`APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD`, `KEYCHAIN_PASSWORD`,
+`NOTARYTOOL_APPLE_ID`, `NOTARYTOOL_TEAM_ID`, and `NOTARYTOOL_PASSWORD`.
+
+Before native work, and again immediately after all packaging/signing/notary/
+staple gates, publication checks the remote tag and all authenticated release
+pages, including drafts. Any existing match, authentication/network error,
+404, malformed response or later-page failure stops publication. A successful
+complete no-match is required. It then creates an exact-SHA tag with a
+create-only Git refs POST, verifies the remote SHA, creates a non-draft,
+non-prerelease release with the original empty notes policy, and separately
+uploads `CRC32-X.Y.Z.zip` and `CRC32-X.Y.Z.dmg` to the newly returned release ID.
+No release update, asset clobber, deletion, rollback or retry is performed.
+
+**Partial-state recovery:** inspect the error, remote tag SHA, published/draft
+releases and uploaded assets manually. A failed create or upload deliberately
+retains any tag, release and assets already created; rerunning cannot repair or
+overwrite them. A maintainer must decide how to complete the retained release
+outside this workflow or prepare a new source version. Never assume a failed
+run left no remote state.
+
+Local lifecycle regressions (no native build, signing or publication):
+
+```sh
+python3 -m unittest discover -s .github/tests -v
+actionlint
+```
+
+---
+
 ## CRC32 Get
 
 ### Syntax
