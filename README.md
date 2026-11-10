@@ -7,6 +7,10 @@
 
 4D implementation of the standard 32-bit CRC (CRC-32/ADCCP, the same polynomial used by PKZIP, gzip, and Ethernet FCS). The plugin exposes a single command that computes the checksum of a `Blob` and returns it as a `Longint`.
 
+Native wrapper ownership contracts, audit scope, and unsigned regression commands are
+documented in [tests/native/README.md](tests/native/README.md). The picture helpers
+are compiled by both projects but are not called by the public CRC command.
+
 | Command | Returns | Purpose |
 |---|---|---|
 | [`CRC32 Get`](#crc32-get) | `Longint` | Compute the CRC-32 checksum of a blob's contents. |

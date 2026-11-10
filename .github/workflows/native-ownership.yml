@@ -1,0 +1,23 @@
+name: Native ownership
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  ownership:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Python source lifecycle regressions
+        run: python3 -m unittest discover -s .github/tests -v
+      - name: Actual-source ownership regressions (ASan and UBSan)
+        run: python3 tests/native/run_ownership.py
+      - name: Same harness detects immutable baseline defects
+        run: python3 tests/native/run_ownership.py --baseline
